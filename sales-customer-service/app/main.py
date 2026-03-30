@@ -2,11 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-
-from app.routers.v1 import customers
-
-from app.core.logging_config import setup_logging
-from app.core.middleware import RequestContextMiddleware
+from app.routers import customers
 
 from app.exceptions.custom_exceptions import AppException
 from app.exceptions.handlers import (
@@ -15,8 +11,6 @@ from app.exceptions.handlers import (
     validation_exception_handler,
     generic_exception_handler
 )
-
-setup_logging()
 
 if os.getenv("ENVIRONMENT") == "production":
     docs_url = None
@@ -32,30 +26,15 @@ app = FastAPI(
     docs_url=docs_url,
     redoc_url=redoc_url,
     openapi_url=openapi_url,
-    redirect_slashes=False
 )
 
 
-import uuid
-from starlette.middleware.base import BaseHTTPMiddleware
-from app.core.logging_config import request_id_ctx
-
-class RequestContextMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-
-        request_id_ctx.set(request_id)
-
-        response = await call_next(request)
-
-        response.headers["X-Request-ID"] = request_id
-
-        return response
-
+# Register exception handlers
 app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
 
-app.include_router(customers.router, prefix="/api/v1")
+# Register routers
+app.include_router(customers.router)
