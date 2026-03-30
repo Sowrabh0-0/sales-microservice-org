@@ -1,12 +1,9 @@
-import logging
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.customer import Customer
 from app.exceptions.custom_exceptions import NotFoundException, ConflictException
-
-logger = logging.getLogger(__name__)
 
 
 def create_customer_service(
@@ -16,8 +13,6 @@ def create_customer_service(
     organization_id: int,
     created_by_user_id: int
 ) -> Customer:
-
-    logger.info("Creating customer", extra={"email": email})
 
     customer = Customer(
         organization_id=organization_id,
@@ -32,17 +27,13 @@ def create_customer_service(
     try:
         db.commit()
         db.refresh(customer)
-        logger.info("Customer created", extra={"customer_id": customer.id})
         return customer
     except IntegrityError:
         db.rollback()
-        logger.warning("Customer email conflict", extra={"email": email})
         raise ConflictException("Customer email already exists")
 
 
 def get_customer(db: Session, customer_id: int, organization_id: int) -> Customer:
-
-    logger.info("Fetching customer", extra={"customer_id": customer_id})
 
     customer = (
         db.query(Customer)
@@ -54,7 +45,6 @@ def get_customer(db: Session, customer_id: int, organization_id: int) -> Custome
     )
 
     if not customer:
-        logger.warning("Customer not found", extra={"customer_id": customer_id})
         raise NotFoundException("Customer not found")
 
     return customer
@@ -66,7 +56,6 @@ def list_customers_service(
     offset: int = 0,
     limit: int = 15
 ):
-    logger.info("Listing customers", extra={"offset": offset, "limit": limit})
 
     return (
         db.query(Customer)
@@ -85,7 +74,6 @@ def update_customer(
     name: str,
     email: str
 ):
-    logger.info("Updating customer", extra={"customer_id": customer_id})
 
     customer = get_customer(db, customer_id, organization_id)
 
@@ -95,11 +83,9 @@ def update_customer(
     try:
         db.commit()
         db.refresh(customer)
-        logger.info("Customer updated", extra={"customer_id": customer.id})
         return customer
     except IntegrityError:
         db.rollback()
-        logger.warning("Email conflict on update", extra={"email": email})
         raise ConflictException("Email already exists")
 
 
@@ -108,8 +94,6 @@ def customer_exists(
     customer_id: int,
     organization_id: int
 ) -> bool:
-
-    logger.info("Checking customer existence", extra={"customer_id": customer_id})
 
     customer = (
         db.query(Customer)
